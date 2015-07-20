@@ -1,6 +1,14 @@
 using NewTR
 using Base.Test
 
+if VERSION < v"0.4.0-dev"
+  import Base.rand
+  function rand(x::Array{Float64,1})
+    n = length(x)
+    return x[rand(1:n)]
+  end
+end
+
 macro saveError()
   quote
     file = open("test/error_data.jl", "w")
@@ -52,8 +60,8 @@ for i = 1:N
   total += 1
   if ef == 0
     success += 1
+    @test norm(P(x-∇fx)-x, Inf) < 1e-5
   end
-  @test norm(P(x-∇fx)-x, Inf) < 1e-5
 end
 
 println("Convergence rate: $(100*success/total)")

@@ -10,6 +10,18 @@ using Compat
     0=> "Convergence criteria satisfied",
     1=> "Maximum number of iterations" )
 
+function solve(f::Function, ∇f::Function, ∇²f::Function, l::Vector, u::Vector,
+    x0::Vector;
+    ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
+    σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
+    Δmin::Real = 1e-12, Δmax::Real = 1e20,
+    verbose::Bool = false)
+  n = length(x0)
+  P(x) = Float64[x[i] < l[i] ? l[i] : (x[i] > u[i] ? u[i] : x[i]) for i = 1:n]
+  return solve(f, ∇f, ∇²f, P, x0, ϵ=ϵ, η₀=η₀, η₁=η₁, η₂=η₂, σ₁=σ₁, σ₂=σ₂, σ₃=σ₃,
+      kmax=kmax, Δmin=Δmin, Δmax=Δmax, verbose=verbose)
+end
+
 function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     x0::Vector;
     ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
@@ -35,7 +47,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     ψ(w) = dot(∇fx,w) + 0.5*dot(w,B*w)
     # Compute the Cauchy step sC
     sC = cauchyStep(x, ∇fx, B, P, Δ, verbose=verbose)
-    # Compute the step s satisfied (2.5)
+    # Compute the step s that satisfies (2.5)
     s = sC
     @verbose("s = $s")
     @verbose("ψ(s) = $(ψ(s))")
