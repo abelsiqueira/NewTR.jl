@@ -3,15 +3,18 @@ using Base.Test
 
 println("Testing Quadratic bounded problems")
 
-N = 100
+N = 100000
 a = -1
 b = 2
 
+total = 0
+success = 0
+
 for i = 1:N
-  n = rand(10:100)
+  n = 3
 
   c = rand(n)*(b-a)+a
-  α = rand(n)*100 + 1
+  α = rand(n)*100 + 0.1
   l = rand(n)*(b-a)+a
   u = l + rand(n)
 
@@ -26,6 +29,27 @@ for i = 1:N
   x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, x0)
   sol = P(c)
 
-  @test ef == 0
-  @test norm(P(x-∇fx)-x, Inf) < 1e-5
+  if ef != 0
+    file = open("test/error_data.jl", "w")
+    write(file, "#ERROR data\n")
+    write(file, "n = $n\n")
+    write(file, "c = $c\n")
+    write(file, "α = $α\n")
+    write(file, "l = $l\n")
+    write(file, "u = $u\n")
+    write(file, "x0 = $x0\n")
+    write(file, "#x = $x\n")
+    write(file, "#fx = $fx\n")
+    write(file, "#|P[x-∇fx]-x| = $(norm(P(x-∇fx)-x, Inf))\n")
+    close(file)
+  end
+  total += 1
+  if ef == 0
+    @test norm(P(x-∇fx)-x, Inf) < 1e-5
+    success += 1
+  else
+    @test k == 10000
+  end
 end
+
+@test success/total > 0.95
