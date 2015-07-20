@@ -10,7 +10,7 @@ using Compat
     0=> "Convergence criteria satisfied",
     1=> "Maximum number of iterations" )
 
-function solve (f::Function, ∇f::Function, ∇²f::Function, P::Function,
+function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     x0::Vector;
     ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
     σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
@@ -72,7 +72,7 @@ end # function solve
 # s(α) = P[x - α∇fx] - x
 # (2.4) ψ(s) ≦ μ₀∇f(x)⋅s
 #       |s| ≦ μ₁Δ
-function cauchyStep (x::Vector, ∇fx::Vector, B::Matrix, P::Function, Δ::Real;
+function cauchyStep(x::Vector, ∇fx::Vector, B::Matrix, P::Function, Δ::Real;
     ϵ::Real = 1e-5, μ₀::Real = 1e-2, μ₁::Real = 1.0, kmax = 50,
     verbose::Bool = false)
   α = 1.0
