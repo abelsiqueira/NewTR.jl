@@ -15,7 +15,11 @@ function solve (f::Function, ∇f::Function, ∇²f::Function, P::Function,
     ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
     σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
     verbose::Bool = false)
-  x = copy(x0)
+
+  x = P(x0)
+  if x != x0
+    println("Warning: x0 was not feasible. Using P[x0] as initial point")
+  end
   ∇fx = ∇f(x)
   B = ∇²f(x)
   s = ones(x)
@@ -25,10 +29,11 @@ function solve (f::Function, ∇f::Function, ∇²f::Function, P::Function,
   while norm(P(x-∇fx)-x, Inf) > ϵ
     @verbose("x = $x")
     @verbose("∇fx = $(∇fx)")
+    @verbose("Δ = $Δ")
     # Compute the model ψ
     ψ(w) = dot(∇fx,w) + 0.5*dot(w,B*w)
     # Compute the Cauchy step sC
-    sC = cauchyStep(x, ∇fx, B, P, Δ)
+    sC = cauchyStep(x, ∇fx, B, P, Δ, verbose=verbose)
     # Compute the step s satisfied (2.5)
     s = sC
     @verbose("s = $s")
@@ -58,17 +63,17 @@ function solve (f::Function, ∇f::Function, ∇²f::Function, P::Function,
 
     k += 1
     @verbose("####################### k = $k")
-    k > kmax && return x, ∇fx, kmax, 1
+    k > kmax && return x, f(x), ∇fx, kmax, 1
   end # while norm(s) > ϵ
 
-  return x, ∇fx, k, 0
+  return x, f(x), ∇fx, k, 0
 end # function solve
 
 # s(α) = P[x - α∇fx] - x
 # (2.4) ψ(s) ≦ μ₀∇f(x)⋅s
 #       |s| ≦ μ₁Δ
 function cauchyStep (x::Vector, ∇fx::Vector, B::Matrix, P::Function, Δ::Real;
-    ϵ::Real = 1e-5, μ₀::Real = 1e-2, μ₁::Real = 1.0, kmax = 10,
+    ϵ::Real = 1e-5, μ₀::Real = 1e-2, μ₁::Real = 1.0, kmax = 50,
     verbose::Bool = false)
   α = 1.0
   s(α) = P(x-α*∇fx)-x
@@ -85,15 +90,15 @@ function cauchyStep (x::Vector, ∇fx::Vector, B::Matrix, P::Function, Δ::Real;
   if ψ(sα) <= μ₀*dot(∇fx, sα) && norm(sα) <= μ₁*Δ
     αplus = 2*α
     splus = s(αplus)
-    while ψ(splus) <= μ₀*dot(∇fx, splus) && norm(splus) <= μ₁*Δ
+    while ψ(splus) <= μ₀*dot(∇fx, splus) && norm(splus) <= μ₁*Δ && splus != sα
       α = αplus
       sα = splus
       αplus = 2*α
       splus = s(αplus)
       k += 1
       if k > kmax
-        @verbose("|s⁺| = $(norm(splus))")
-        @verbose("α⁺ = $(αplus)")
+        @verbose("  |s⁺| = $(norm(splus))")
+        @verbose("  α⁺ = $(αplus)")
       end
       k > kmax && error("kmax on cauchyStep")
     end

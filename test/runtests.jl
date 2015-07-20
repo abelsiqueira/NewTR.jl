@@ -8,9 +8,10 @@ x0 = [-3.0;-4.0]
 
 P(x) = x
 
-x, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, x0)
+x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, x0)
 
 println("x = $x")
+println("fx = $fx")
 println("|∇fx| = $(norm(∇fx))")
 println("Iterations: $k")
 println("EXIT: $(NewTR.flags[ef])")
