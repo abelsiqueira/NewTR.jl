@@ -14,7 +14,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     x0::Vector;
     ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
     σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
-    Δmax::Real = 1e20,
+    Δmin::Real = 1e-12, Δmax::Real = 1e20,
     verbose::Bool = false)
 
   x = P(x0)
@@ -40,7 +40,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     @verbose("s = $s")
     @verbose("ψ(s) = $(ψ(s))")
     # Compute the ratio ρ and update x by (2.2)
-    ψ(s) >= 0 && error("ψ(s) >= 0")
+    ψ(s) >= 0 && error("ψ(s) = $(ψ(s)) >= 0")
     ρ = ( f(x+s)-f(x) )/ψ(s)
     @verbose("ρ = $ρ")
     # Update Δ according to (2.3)
@@ -54,7 +54,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     else
       Δnew = σ₃*Δ
     end
-    Δ = min(Δnew, Δmax)
+    Δ = max(min(Δnew, Δmax), Δmin)
     # Update x
     if ρ > η₀
       x = x + s
@@ -115,6 +115,7 @@ function cauchyStep(x::Vector, ∇fx::Vector, B::Matrix, P::Function, Δ::Real;
     end
     sα = splus
   end
+  @verbose("  α⁺ = $(αplus)")
   return sα
 end
 

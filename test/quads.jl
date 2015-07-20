@@ -1,17 +1,33 @@
 using NewTR
 using Base.Test
 
+macro saveError()
+  quote
+    file = open("test/error_data.jl", "w")
+    write(file, "#ERROR data\n")
+    write(file, "n = $n\n")
+    write(file, "c = $c\n")
+    write(file, "α = $α\n")
+    write(file, "l = $l\n")
+    write(file, "u = $u\n")
+    write(file, "x0 = $x0\n")
+    write(file, "#x = $x\n")
+    write(file, "#fx = $fx\n")
+    write(file, "#|P[x-∇fx]-x| = $(norm(P(x-∇fx)-x, Inf))\n")
+    close(file)
+  end
+end
+
 println("Testing Quadratic bounded problems")
 
-N = 100000
+N = 1000
 a = -1
 b = 2
 
-total = 0
 success = 0
-
+total = 0
 for i = 1:N
-  n = 3
+  n = rand(10:100)
 
   c = rand(n)*(b-a)+a
   α = rand(n)*100 + 0.1
@@ -26,30 +42,19 @@ for i = 1:N
 
   P(x) = Float64[x[i] < l[i] ? l[i] : (x[i] > u[i] ? u[i] : x[i]) for i=1:n]
 
-  x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, x0)
-  sol = P(c)
-
-  if ef != 0
-    file = open("test/error_data.jl", "w")
-    write(file, "#ERROR data\n")
-    write(file, "n = $n\n")
-    write(file, "c = $c\n")
-    write(file, "α = $α\n")
-    write(file, "l = $l\n")
-    write(file, "u = $u\n")
-    write(file, "x0 = $x0\n")
-    write(file, "#x = $x\n")
-    write(file, "#fx = $fx\n")
-    write(file, "#|P[x-∇fx]-x| = $(norm(P(x-∇fx)-x, Inf))\n")
-    close(file)
+  try
+    x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, x0)
+  catch Exception
+    @saveError
+    error()
   end
+
   total += 1
   if ef == 0
-    @test norm(P(x-∇fx)-x, Inf) < 1e-5
     success += 1
-  else
-    @test k == 10000
   end
+  @test norm(P(x-∇fx)-x, Inf) < 1e-5
 end
 
+println("Convergence rate: $(100*success/total)")
 @test success/total > 0.95
