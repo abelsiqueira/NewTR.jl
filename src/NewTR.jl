@@ -14,6 +14,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     x0::Vector;
     ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
     σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
+    Δmax::Real = 1e20,
     verbose::Bool = false)
 
   x = P(x0)
@@ -53,7 +54,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     else
       Δnew = σ₃*Δ
     end
-    Δ = Δnew
+    Δ = min(Δnew, Δmax)
     # Update x
     if ρ > η₀
       x = x + s
