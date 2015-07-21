@@ -6,28 +6,50 @@ end
 
 using Compat
 
+type Options
+  ϵ::Real
+  η₀::Real
+  η₁::Real
+  η₂::Real
+  σ₁::Real
+  σ₂::Real
+  σ₃::Real
+  kmax::Int
+  Δmin::Real
+  Δmax::Real
+  verbose::Bool
+  function Options(ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real =
+      0.75, σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
+      Δmin::Real = 1e-12, Δmax::Real = 1e20, verbose::Bool = false)
+    return new(ϵ, η₀, η₁, η₂, σ₁, σ₂, σ₃, kmax, Δmin, Δmax, verbose)
+  end
+end
+
 @compat flags = Dict(
     0=> "Convergence criteria satisfied",
     1=> "Maximum number of iterations" )
 
 function solve(f::Function, ∇f::Function, ∇²f::Function, l::Vector, u::Vector,
-    x0::Vector;
-    ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
-    σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
-    Δmin::Real = 1e-12, Δmax::Real = 1e20,
-    verbose::Bool = false)
+    x0::Vector; options::Options = Options())
   n = length(x0)
   P(x) = Float64[x[i] < l[i] ? l[i] : (x[i] > u[i] ? u[i] : x[i]) for i = 1:n]
-  return solve(f, ∇f, ∇²f, P, x0, ϵ=ϵ, η₀=η₀, η₁=η₁, η₂=η₂, σ₁=σ₁, σ₂=σ₂, σ₃=σ₃,
-      kmax=kmax, Δmin=Δmin, Δmax=Δmax, verbose=verbose)
+
+  return solve(f, ∇f, ∇²f, P, x0, options=options)
 end
 
 function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
-    x0::Vector;
-    ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real = 0.75,
-    σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
-    Δmin::Real = 1e-12, Δmax::Real = 1e20,
-    verbose::Bool = false)
+    x0::Vector; options::Options = Options())
+  ϵ = options.ϵ
+  η₀ = options.η₀
+  η₁ = options.η₁
+  η₂ = options.η₂
+  σ₂ = options.σ₂
+  σ₁ = options.σ₁
+  σ₃ = options.σ₃
+  kmax = options.kmax
+  Δmax = options.Δmax
+  Δmin = options.Δmin
+  verbose = options.verbose
 
   x = P(x0)
   if x != x0
