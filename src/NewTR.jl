@@ -1,5 +1,7 @@
 module NewTR
 
+include("Steps.jl")
+
 macro verbose(str)
   :(verbose && println($(str)))
 end
@@ -28,6 +30,70 @@ end
 @compat flags = Dict(
     0=> "Convergence criteria satisfied",
     1=> "Maximum number of iterations" )
+
+function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
+    η₁ = 0.25, η₂ = 0.75, μ = 1.0, α = 0.5, β = 0.5, γ₂ = 1/6, γ₄ = 6,
+    kmax = 1000)
+  # Unconstrained problem. 
+
+  x = copy(x₀)
+  fx = f(x)
+  ∇fx = ∇f(x)
+  B = eye(length(x))
+  ngrad = norm(∇fx)
+  r = ngrad
+
+  k = 0
+  while ngrad > 1e-8
+    # Step 2
+    d = more_sorensen(r, ∇fx, B)
+
+    # Step 3
+    ∇fx₀ = copy(∇fx)
+    m = fx + dot(∇fx,d) + 0.5*dot(d,B*d)
+    x⁺ = x + d
+    fx⁺ = f(x⁺)
+    ∇fx⁺ = ∇f(x⁺)
+    Ared = fx - fx⁺
+    Pred = fx - m
+    ρ = Ared/Pred
+    if ρ > η₁
+      x = x⁺
+      fx = fx⁺
+      ∇fx = ∇fx⁺
+      ngrad = norm(∇fx)
+    end
+
+    # Step 4
+    if ρ < η₂
+      μ = γ₂*μ
+    else
+      if norm(d) > r/2
+        μ = γ₄*μ
+      end
+    end 
+    s = μ^α
+    t = ngrad^β
+    r = s*t
+
+    # Step 5
+    if ρ > η₁
+      y = ∇fx - ∇fx₀
+      a = dot(d,y)
+      if a > 0
+        b = dot(d,B*d)
+        v = B*d
+        B = B + (1/a)*y*y' - (1/b)*v*v'
+      end
+    end
+    k += 1
+    if k >= kmax
+      return x, f(x), ∇fx, k, 1
+    end
+  end # while
+
+  return x, f(x), ∇fx, k, 0
+end
 
 function solve(f::Function, ∇f::Function, ∇²f::Function, l::Vector, u::Vector,
     x0::Vector; options::Options = Options())
