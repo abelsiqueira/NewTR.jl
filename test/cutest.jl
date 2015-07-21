@@ -9,21 +9,28 @@ function cutest_solve(nlp::CUTEstModel)
     ∇f(x) = jl_ugr(nlp, x)
     ∇²f(x) = jl_udh(nlp, x, nlp.meta.nvar)
 
-    function P (x::Array{Float64,1})
-      y = copy(x)
-      n = nlp.meta.nvar
-      for i = 1:n
-        if y[i] < nlp.meta.lvar[i]
-          y[i] = nlp.meta.lvar[i]
-        elseif y[i] > nlp.meta.uvar[i]
-          y[i] = nlp.meta.uvar[i]
-        end
-      end
-      return y
-    end # P
+    opt = NewTR.Options()
+    bounded = any([l > -1e20 for l in nlp.meta.lvar]) ||
+        any([u < 1e20 for u in nlp.meta.uvar])
 
-    @time x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0, verbose=false,
-    kmax=1000)
+    if bounded
+      function P(x::Array{Float64,1})
+        y = copy(x)
+        n = nlp.meta.nvar
+        for i = 1:n
+          if y[i] < nlp.meta.lvar[i]
+            y[i] = nlp.meta.lvar[i]
+          elseif y[i] > nlp.meta.uvar[i]
+            y[i] = nlp.meta.uvar[i]
+          end
+        end
+        return y
+      end # P
+
+      @time x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0)
+    else
+      @time x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, nlp.meta.x0)
+    end
   end
 
   println("#########")
@@ -32,8 +39,11 @@ function cutest_solve(nlp::CUTEstModel)
     println("x = $x")
   end
   println("fx = $fx")
-  println("|∇fx| = $(norm(∇fx))")
-  println("|P[x-∇fx]-x| = $(norm(P(x-∇fx)-x))")
+  if bounded
+    println("|P[x-∇fx]-x| = $(norm(P(x-∇fx)-x))")
+  else
+    println("|∇fx| = $(norm(∇fx))")
+  end
   println("Iterations: $k")
 end
 
