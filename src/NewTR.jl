@@ -32,7 +32,7 @@ end
     1=> "Maximum number of iterations" )
 
 function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
-    η₁ = 0.25, η₂ = 0.75, μ = 1.0, α = 0.5, β = 0.5, γ₂ = 1/6, γ₄ = 6,
+    η₁ = 0.25, η₂ = 0.75, μ = 1.0, α = 0.5, β = 0.5, σ₁ = 1/6, σ₂ = 6,
     kmax = 1000)
   # Unconstrained problem. 
 
@@ -66,10 +66,10 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
 
     # Step 4
     if ρ < η₂
-      μ = γ₂*μ
+      μ = σ₁*μ
     else
       if norm(d) > r/2
-        μ = γ₄*μ
+        μ = σ₂*μ
       end
     end 
     s = μ^α
