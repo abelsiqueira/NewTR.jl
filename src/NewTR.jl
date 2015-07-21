@@ -39,17 +39,9 @@ end
 
 function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
     x0::Vector; options::Options = Options())
-  ϵ = options.ϵ
-  η₀ = options.η₀
-  η₁ = options.η₁
-  η₂ = options.η₂
-  σ₂ = options.σ₂
-  σ₁ = options.σ₁
-  σ₃ = options.σ₃
-  kmax = options.kmax
-  Δmax = options.Δmax
-  Δmin = options.Δmin
-  verbose = options.verbose
+  for field in fieldnames(options)
+    @eval $field = $(options).$(field)
+  end
 
   x = P(x0)
   if x != x0
