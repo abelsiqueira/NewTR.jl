@@ -6,10 +6,11 @@ f(x) = (x[1]-1)^2 + 100*(x[2]-x[1]^2)^2
 
 x0 = [-1.2;1.0]
 
-x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, x0)
+x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, x0)
 
 println("x = $x")
 println("fx = $fx")
 println("|∇fx| = $(norm(∇fx))")
 println("Iterations: $k")
 println("EXIT: $(NewTR.flags[ef])")
+println("Elapsed time: $el_time")

@@ -27,14 +27,14 @@ function cutest_solve(nlp::CUTEstModel)
         return y
       end # P
 
-      @time x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0)
+      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0)
     else
-      @time x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, nlp.meta.x0)
+      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, nlp.meta.x0)
     end
   end
 
   println("#########")
-  println("EXIT: $(NewTR.flags[ef])")
+  println("EXIT $ef: $(NewTR.flags[ef])")
   if nlp.meta.nvar < 10
     println("x = $x")
   end
@@ -45,6 +45,7 @@ function cutest_solve(nlp::CUTEstModel)
     println("|∇fx| = $(norm(∇fx))")
   end
   println("Iterations: $k")
+  println("Elapsed time: $el_time")
 end
 
 if length(ARGS) < 1

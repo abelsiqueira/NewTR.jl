@@ -8,10 +8,11 @@ x0 = [-1.0;0.5]
 l = [-2.0; 0.0]
 u = [0.5; 1.0]
 
-x, fx, ∇fx, k, ef = NewTR.solve(f, ∇f, ∇²f, l, u, x0)
+x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, l, u, x0)
 
 println("x = $x")
 println("fx = $fx")
 println("|∇fx| = $(norm(∇fx))")
 println("Iterations: $k")
 println("EXIT: $(NewTR.flags[ef])")
+println("Elapsed time: $el_time")
