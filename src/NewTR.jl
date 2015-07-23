@@ -36,7 +36,7 @@ end
 
 function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
     η₁ = 0.25, η₂ = 0.75, μ = 1.0, α = 0.5, β = 0.5, σ₁ = 1/6, σ₂ = 6,
-    kmax = 1000, max_time = 60)
+    kmax = 10000, max_time = 60, verbose = true)
   # Unconstrained problem.
 
   ef = 0
@@ -52,6 +52,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
   k = 0
   el_time = time() - st_time
   while ngrad > 1e-8 && el_time < max_time
+    @verbose("####################### k = $k")
     # Step 2
     d = more_sorensen(r, ∇fx, B)
 
@@ -61,9 +62,19 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
     x⁺ = x + d
     fx⁺ = f(x⁺)
     ∇fx⁺ = ∇f(x⁺)
+    @verbose("|d| = $(norm(d))")
+    @verbose("|∇fx| = $(norm(∇fx))")
     Ared = fx - fx⁺
     Pred = fx - m
-    ρ = Ared/Pred
+    if abs(Pred) < eps(Float64)
+      ρ = 1e20
+    else
+      ρ = Ared/Pred
+    end
+    @verbose("ρ = $ρ")
+    if isnan(ρ)
+      error("ρ is NaN")
+    end
     if ρ > η₁
       x = x⁺
       fx = fx⁺
