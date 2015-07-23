@@ -34,17 +34,33 @@ end
     1=> "Maximum number of iterations",
     2=> "Time limit exceeded")
 
-function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
+function bfgs_update!(B::Matrix, y::Vector, v::Vector, a::Float64, b::Float64)
+  n = length(y)
+  for i = 1:n
+    B[i,i] += y[i]^2/a - v[i]^2/b
+    for j = i+1:n
+      aux = y[i]*y[j]/a - v[i]*v[j]/b
+      B[i,j] += aux
+      B[j,i] += aux
+    end
+  end
+end
+
+function solve(f::Function, ∇f!::Function, ∇²f::Function, x₀::Vector;
     η₁ = 0.25, η₂ = 0.75, μ = 1.0, α = 0.5, β = 0.5, σ₁ = 1/6, σ₂ = 6,
-    kmax = 10000, max_time = 60, verbose = true)
+    kmax = 10000, max_time = 60, verbose = false)
   # Unconstrained problem.
 
   ef = 0
   st_time = time()
 
   x = copy(x₀)
+  x⁺ = copy(x)
   fx = f(x)
-  ∇fx = ∇f(x)
+  ∇fx = zeros(x)
+  ∇f!(x, ∇fx)
+  ∇fx₀ = copy(∇fx)
+  ∇fx⁺ = copy(∇fx)
   B = eye(length(x))
   ngrad = norm(∇fx)
   r = ngrad
@@ -57,11 +73,11 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
     d = more_sorensen(r, ∇fx, B)
 
     # Step 3
-    ∇fx₀ = copy(∇fx)
+    copy!(∇fx₀, copy(∇fx))
     m = fx + dot(∇fx,d) + 0.5*dot(d,B*d)
     x⁺ = x + d
     fx⁺ = f(x⁺)
-    ∇fx⁺ = ∇f(x⁺)
+    ∇f!(x⁺, ∇fx⁺)
     @verbose("|d| = $(norm(d))")
     @verbose("|∇fx| = $(norm(∇fx))")
     Ared = fx - fx⁺
@@ -78,7 +94,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
     if ρ > η₁
       x = x⁺
       fx = fx⁺
-      ∇fx = ∇fx⁺
+      copy!(∇fx, ∇fx⁺)
       ngrad = norm(∇fx)
     end
 
@@ -101,7 +117,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
       if a > 0
         b = dot(d,B*d)
         v = B*d
-        B = B + (1/a)*y*y' - (1/b)*v*v'
+        bfgs_update!(B, y, v, a, b)
       end
     end
     k += 1
@@ -116,7 +132,7 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, x₀::Vector;
     ef = 2
   end
 
-  return x, f(x), ∇fx, k, ef, el_time
+  return x, fx, ∇fx, k, ef, el_time
 end
 
 function solve(f::Function, ∇f::Function, ∇²f::Function, l::Vector, u::Vector,

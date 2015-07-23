@@ -7,6 +7,7 @@ function cutest_solve(nlp::CUTEstModel)
   else
     f(x) = jl_ufn(nlp, x)
     ∇f(x) = jl_ugr(nlp, x)
+    ∇f!(x, g) = jl_ugr!(nlp, x, g)
     ∇²f(x) = jl_udh(nlp, x, nlp.meta.nvar)
 
     opt = NewTR.Options()
@@ -29,7 +30,7 @@ function cutest_solve(nlp::CUTEstModel)
 
       @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0)
     else
-      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, nlp.meta.x0)
+      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f, nlp.meta.x0)
     end
   end
 
