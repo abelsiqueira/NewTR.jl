@@ -1,0 +1,10 @@
+DIMENSION       4
+BB_EXE          "$julia $objfun.jl"
+BB_OUTPUT_TYPE  OBJ EB
+X0              ( 0.25 0.75 0.25 4 )
+LOWER_BOUND     ( 0 0 0 1 )
+UPPER_BOUND     ( 1 1 1 10 )
+MAX_BB_EVAL     1000
+TMP_DIR         /tmp
+DISPLAY_DEGREE  2
+DISPLAY_STATS BBE ( SOL ) OBJ
