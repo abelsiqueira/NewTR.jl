@@ -1,10 +1,15 @@
 using NewTR
 using CUTEst
 
-function cutest_solve(nlp::CUTEstModel)
+function cutest_solve(nlp::CUTEstModel, options_file::String = "")
   if nlp.meta.ncon > 0
     error("ERROR: Can't solve constrained problems yet")
   else
+    if options_file != ""
+      options = NewTR.ReadOptions(options_file)
+    else
+      options = NewTR.Options()
+    end
     f(x) = jl_ufn(nlp, x)
     ∇f(x) = jl_ugr(nlp, x)
     ∇f!(x, g) = jl_ugr!(nlp, x, g)
@@ -28,9 +33,11 @@ function cutest_solve(nlp::CUTEstModel)
         return y
       end # P
 
-      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0)
+      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0,
+          options=options)
     else
-      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f, nlp.meta.x0)
+      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f, nlp.meta.x0,
+          options=options)
     end
   end
 
@@ -54,7 +61,13 @@ if length(ARGS) < 1
   println("Usage\n  julia cutest.jl PROBLEM")
 end
 
+if length(ARGS) > 1
+  options_file = ARGS[2]
+else
+  options_file = ""
+end
+
 nlp = CUTEstModel(ascii(ARGS[1]))
 
-cutest_solve(nlp)
+cutest_solve(nlp, options_file)
 

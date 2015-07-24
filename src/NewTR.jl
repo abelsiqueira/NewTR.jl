@@ -16,17 +16,34 @@ type Options
   σ₁::Real
   σ₂::Real
   σ₃::Real
+  α::Real
+  β::Real
+  δ₀::Real
   kmax::Int
   Δmin::Real
   Δmax::Real
   verbose::Bool
   max_time::Real
   function Options(ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real =
-      0.75, σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, kmax::Int = 10000,
-      Δmin::Real = 1e-12, Δmax::Real = 1e20, verbose::Bool = false,
-      max_time = 600)
-    return new(ϵ, η₀, η₁, η₂, σ₁, σ₂, σ₃, kmax, Δmin, Δmax, verbose, max_time)
+      0.75, σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, α::Real = 1.0,
+      β::Real = 0.0, δ₀::Real = 1.0, kmax::Int = 10000, Δmin::Real = 1e-12,
+      Δmax::Real = 1e20, verbose::Bool = false, max_time = 600)
+    return new(ϵ, η₀, η₁, η₂, σ₁, σ₂, σ₃, α, β, δ₀, kmax, Δmin, Δmax, verbose, max_time)
   end
+end
+
+function ReadOptions(filename::String)
+  return ReadOptions(open(filename))
+end
+
+function ReadOptions(file::IOStream)
+  options = Options()
+  for line in readlines(file)
+    var = symbol(split(line)[1])
+    value = parse(split(line)[2])
+    @eval $(options).$(var) = $value
+  end
+  return options
 end
 
 @compat flags = Dict(
@@ -46,10 +63,12 @@ function bfgs_update!(B::Matrix, y::Vector, v::Vector, a::Float64, b::Float64)
   end
 end
 
+# Unconstrained problem.
 function solve(f::Function, ∇f!::Function, ∇²f::Function, x₀::Vector;
-    η₁ = 0.25, η₂ = 0.75, μ = 1.0, α = 0.5, β = 0.5, σ₁ = 1/6, σ₂ = 6,
-    kmax = 10000, max_time = 60, verbose = false)
-  # Unconstrained problem.
+    options::Options = Options())
+  for field in fieldnames(options)
+    @eval $field = $(options).$(field)
+  end
 
   ef = 0
   st_time = time()
@@ -64,6 +83,7 @@ function solve(f::Function, ∇f!::Function, ∇²f::Function, x₀::Vector;
   B = eye(length(x))
   ngrad = norm(∇fx)
   r = ngrad
+  μ = δ₀
 
   k = 0
   el_time = time() - st_time
@@ -103,7 +123,7 @@ function solve(f::Function, ∇f!::Function, ∇²f::Function, x₀::Vector;
       μ = σ₁*μ
     else
       if norm(d) > r/2
-        μ = σ₂*μ
+        μ = σ₃*μ
       end
     end
     s = μ^α
