@@ -10,9 +10,9 @@ function cutest_solve(nlp::CUTEstModel, options_file::String = "")
     else
       error("ERROR: Need parameters file")
     end
-    f(x) = jl_ufn(nlp, x)
-    ∇f!(x, g) = jl_ugr!(nlp, x, g)
-    ∇²f(x) = jl_udh(nlp, x, nlp.meta.nvar)
+    f(x) = ufn(nlp, x)
+    ∇f!(x, g) = ugr!(nlp, x, g)
+    ∇²f(x) = udh(nlp, x, nlp.meta.nvar)
 
     opt = NewTR.Options()
     bounded = any([l > -1e20 for l in nlp.meta.lvar]) ||
