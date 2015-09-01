@@ -44,7 +44,7 @@ for line in readlines(file)
   if converged
     objfun += time
   else
-    objfun += kmax
+    objfun += max_time
   end
 end
 println("$objfun $con")

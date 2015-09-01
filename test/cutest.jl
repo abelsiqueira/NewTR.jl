@@ -14,6 +14,7 @@ function cutest_solve(nlp::CUTEstModel, options_file::String = "")
     ∇f(x) = ugr(nlp, x)
     ∇f!(x, g) = ugr!(nlp, x, g)
     ∇²f(x) = udh(nlp, x, nlp.meta.nvar)
+    ∇²f!(x, B) = udh!(nlp, x, nlp.meta.nvar, B)
 
     opt = NewTR.Options()
     bounded = any([l > -1e20 for l in nlp.meta.lvar]) ||
@@ -36,7 +37,7 @@ function cutest_solve(nlp::CUTEstModel, options_file::String = "")
       @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f, ∇²f, P, nlp.meta.x0,
           options=options)
     else
-      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f, nlp.meta.x0,
+      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f!, nlp.meta.x0,
           options=options)
     end
   end

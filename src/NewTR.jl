@@ -1,10 +1,10 @@
 module NewTR
 
-include("Steps.jl")
-
 macro verbose(str)
   :(verbose && println($(str)))
 end
+
+include("Steps.jl")
 
 using Compat
 
@@ -25,9 +25,9 @@ type Options
   verbose::Bool
   max_time::Real
   function Options(ϵ::Real = 1e-5, η₀::Real = 1e-3, η₁::Real = 0.25, η₂::Real =
-      0.75, σ₁::Real = 0.25, σ₂::Real = 0.5, σ₃::Real = 4.0, α::Real = 1.0,
-      β::Real = 0.0, δ₀::Real = 1.0, kmax::Int = 10000, Δmin::Real = 1e-12,
-      Δmax::Real = 1e20, verbose::Bool = false, max_time = 600)
+      0.75, σ₁::Real = 0.1667, σ₂::Real = 0.5, σ₃::Real = 4.0, α::Real = 1.0,
+      β::Real = 0.0, δ₀::Real = 100.0, kmax::Int = 1000, Δmin::Real = 1e-12,
+      Δmax::Real = 1e20, verbose::Bool = true, max_time = 60)
     return new(ϵ, η₀, η₁, η₂, σ₁, σ₂, σ₃, α, β, δ₀, kmax, Δmin, Δmax, verbose, max_time)
   end
 end
@@ -64,49 +64,66 @@ function bfgs_update!(B::Matrix, y::Vector, v::Vector, a::Float64, b::Float64)
 end
 
 # Unconstrained problem.
-function solve(f::Function, ∇f!::Function, ∇²f::Function, x₀::Vector;
+function solve(f::Function, ∇f!::Function, ∇²f!::Function, x₀::Vector;
     options::Options = Options())
   for field in fieldnames(options)
     @eval $field = $(options).$(field)
+  end
+  if verbose
+    println("Parameters:")
+    for field in fieldnames(options)
+      print("$field = ")
+      @eval println("$($field)")
+    end
   end
 
   ef = 0
   st_time = time()
 
   x = copy(x₀)
+  nvar = length(x)
   x⁺ = copy(x)
   fx = f(x)
-  ∇fx = zeros(x)
+  ∇fx = zeros(nvar)
   ∇f!(x, ∇fx)
   ∇fx₀ = copy(∇fx)
   ∇fx⁺ = copy(∇fx)
-  B = eye(length(x))
+  #B = eye(length(x))
+  B = zeros(nvar,nvar)
   ngrad = norm(∇fx)
-  r = ngrad
   μ = δ₀
+  Δ = μ^α*ngrad^β
 
   k = 0
   el_time = time() - st_time
-  while ngrad > 1e-8 && el_time < max_time
+  while ngrad > ϵ && el_time < max_time
     @verbose("####################### k = $k")
+    if nvar < 5
+      @verbose("x = $x")
+    end
+    @verbose("f(x) = $(f(x))")
     # Step 2
-    d = more_sorensen(r, ∇fx, B)
+    ∇²f!(x, B)
+    d = steihaug_toint(Δ, ∇fx, B, tol=ϵ, verbose=verbose)
+    #d = cauchyStep(x, ∇fx, B, Δ)
+    if nvar < 5
+      @verbose("d = $d")
+    end
 
     # Step 3
-    copy!(∇fx₀, copy(∇fx))
+    #copy!(∇fx₀, copy(∇fx))
     m = fx + dot(∇fx,d) + 0.5*dot(d,B*d)
     x⁺ = x + d
     fx⁺ = f(x⁺)
-    ∇f!(x⁺, ∇fx⁺)
+    #∇f!(x⁺, ∇fx⁺)
+    @verbose("|Δ| = $(Δ)")
     @verbose("|d| = $(norm(d))")
     @verbose("|∇fx| = $(norm(∇fx))")
     Ared = fx - fx⁺
     Pred = fx - m
-    if abs(Pred) < eps(Float64)
-      ρ = 1e20
-    else
-      ρ = Ared/Pred
-    end
+    @verbose("Ared = $Ared")
+    @verbose("Pred = $Pred")
+    ρ = Ared/Pred
     @verbose("ρ = $ρ")
     if isnan(ρ)
       error("ρ is NaN")
@@ -114,32 +131,30 @@ function solve(f::Function, ∇f!::Function, ∇²f::Function, x₀::Vector;
     if ρ > η₁
       x = x⁺
       fx = fx⁺
-      copy!(∇fx, ∇fx⁺)
+      ∇f!(x, ∇fx)
       ngrad = norm(∇fx)
     end
 
     # Step 4
-    if ρ < η₂
+    if ρ < η₁
       μ = σ₁*μ
-    else
-      if norm(d) > r/2
+    elseif ρ > η₂ && Pred > 0
+      if norm(d) > Δ/2
         μ = σ₃*μ
       end
     end
-    s = μ^α
-    t = ngrad^β
-    r = s*t
+    Δ = μ^α*ngrad^β
 
     # Step 5
-    if ρ > η₁
-      y = ∇fx - ∇fx₀
-      a = dot(d,y)
-      if a > 0
-        b = dot(d,B*d)
-        v = B*d
-        bfgs_update!(B, y, v, a, b)
-      end
-    end
+    #if ρ > η₁
+      #y = ∇fx - ∇fx₀
+      #a = dot(d,y)
+      #if a > 0
+        #b = dot(d,B*d)
+        #v = B*d
+        #bfgs_update!(B, y, v, a, b)
+      #end
+    #end
     k += 1
     if k >= kmax
       ef = 1
@@ -233,6 +248,13 @@ function solve(f::Function, ∇f::Function, ∇²f::Function, P::Function,
 
   return x, f(x), ∇fx, k, ef, el_time
 end # function solve
+
+function cauchyStep(x::Vector, ∇fx::Vector, B::Matrix, Δ::Real;
+    ϵ::Real = 1e-5, μ₀::Real = 1e-2, μ₁::Real = 1.0, kmax = 50,
+    verbose::Bool = false)
+  return cauchyStep(x, ∇fx, B, x->x, Δ, ϵ=ϵ, μ₀=μ₀, μ₁=μ₁, kmax=kmax,
+      verbose=verbose)
+end
 
 # s(α) = P[x - α∇fx] - x
 # (2.4) ψ(s) ≦ μ₀∇f(x)⋅s

@@ -13,6 +13,7 @@ function cutest_solve(nlp::CUTEstModel, options_file::String = "")
     f(x) = ufn(nlp, x)
     ∇f!(x, g) = ugr!(nlp, x, g)
     ∇²f(x) = udh(nlp, x, nlp.meta.nvar)
+    ∇²f!(x, H) = udh(nlp, x, nlp.meta.nvar, H)
 
     opt = NewTR.Options()
     bounded = any([l > -1e20 for l in nlp.meta.lvar]) ||
@@ -21,11 +22,11 @@ function cutest_solve(nlp::CUTEstModel, options_file::String = "")
     if bounded
       error("ERROR: Bounded")
     else
-      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f, nlp.meta.x0,
+      @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f!, nlp.meta.x0,
           options=options)
       acum_time = 0.0
-      for i = 1:50
-        @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f, nlp.meta.x0,
+      for i = 1:1
+        @time x, fx, ∇fx, k, ef, el_time = NewTR.solve(f, ∇f!, ∇²f!, nlp.meta.x0,
             options=options)
         acum_time += el_time
       end
